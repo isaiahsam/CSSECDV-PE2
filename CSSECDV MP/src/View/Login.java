@@ -1,5 +1,8 @@
-
 package View;
+
+import Model.User;
+import javax.swing.JOptionPane;
+import javax.swing.JPasswordField;
 
 public class Login extends javax.swing.JPanel {
 
@@ -15,7 +18,7 @@ public class Login extends javax.swing.JPanel {
 
         jLabel1 = new javax.swing.JLabel();
         usernameFld = new javax.swing.JTextField();
-        passwordFld = new javax.swing.JTextField();
+        passwordFld = new javax.swing.JPasswordField(); // Changed to JPasswordField for security
         registerBtn = new javax.swing.JButton();
         loginBtn = new javax.swing.JButton();
 
@@ -82,19 +85,76 @@ public class Login extends javax.swing.JPanel {
                 .addContainerGap(126, Short.MAX_VALUE))
         );
     }// </editor-fold>//GEN-END:initComponents
+    
     private void loginBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loginBtnActionPerformed
-        frame.mainNav();
+        String username = usernameFld.getText().trim();
+        String password = new String(passwordFld.getPassword());
+        
+        // Input validation
+        if (username.isEmpty() || password.isEmpty()) {
+            JOptionPane.showMessageDialog(this, 
+                "Please enter both username and password.", 
+                "Login Error", 
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        // Authenticate user
+        User authenticatedUser = frame.main.sqlite.authenticateUser(username, password);
+        
+        if (authenticatedUser != null) {
+            // Check if account is locked
+            if (authenticatedUser.getLocked() == 1) {
+                JOptionPane.showMessageDialog(this, 
+                    "Account is locked due to multiple failed login attempts.\nPlease contact administrator.", 
+                    "Account Locked", 
+                    JOptionPane.ERROR_MESSAGE);
+                clearFields();
+                return;
+            }
+            
+            // Successful login
+            frame.setCurrentUser(authenticatedUser);
+            JOptionPane.showMessageDialog(this, 
+                "Login successful! Welcome " + authenticatedUser.getUsername(), 
+                "Success", 
+                JOptionPane.INFORMATION_MESSAGE);
+            
+            clearFields();
+            frame.mainNav();
+        } else {
+            // Failed login
+            JOptionPane.showMessageDialog(this, 
+                "Invalid username or password.\nNote: Account will be locked after 3 failed attempts.", 
+                "Login Failed", 
+                JOptionPane.ERROR_MESSAGE);
+            
+            // Clear password field for security
+            passwordFld.setText("");
+        }
     }//GEN-LAST:event_loginBtnActionPerformed
 
     private void registerBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_registerBtnActionPerformed
+        clearFields();
         frame.registerNav();
     }//GEN-LAST:event_registerBtnActionPerformed
 
+    // Helper method to clear form fields
+    private void clearFields() {
+        usernameFld.setText("");
+        passwordFld.setText("");
+    }
+    
+    // Method to clear fields when this panel becomes visible
+    public void resetForm() {
+        clearFields();
+        usernameFld.requestFocus();
+    }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel jLabel1;
     private javax.swing.JButton loginBtn;
-    private javax.swing.JTextField passwordFld;
+    private javax.swing.JPasswordField passwordFld; // Changed to JPasswordField
     private javax.swing.JButton registerBtn;
     private javax.swing.JTextField usernameFld;
     // End of variables declaration//GEN-END:variables

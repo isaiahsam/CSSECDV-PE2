@@ -1,10 +1,14 @@
 package View;
 
 import Controller.Main;
+import Model.User;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Dimension;
 import javax.swing.WindowConstants;
+import javax.swing.JOptionPane;
+import java.sql.Timestamp;
+import java.util.Date;
 
 public class Frame extends javax.swing.JFrame {
 
@@ -26,6 +30,7 @@ public class Frame extends javax.swing.JFrame {
         staffBtn = new javax.swing.JButton();
         clientBtn = new javax.swing.JButton();
         logoutBtn = new javax.swing.JButton();
+        userInfoLbl = new javax.swing.JLabel(); // New label to show current user
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setBackground(new java.awt.Color(153, 153, 153));
@@ -102,6 +107,11 @@ public class Frame extends javax.swing.JFrame {
             }
         });
 
+        userInfoLbl.setFont(new java.awt.Font("Tahoma", 0, 12)); // NOI18N
+        userInfoLbl.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        userInfoLbl.setText("User: Not Logged In");
+        userInfoLbl.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+
         javax.swing.GroupLayout NavigationLayout = new javax.swing.GroupLayout(Navigation);
         Navigation.setLayout(NavigationLayout);
         NavigationLayout.setHorizontalGroup(
@@ -114,7 +124,8 @@ public class Frame extends javax.swing.JFrame {
                     .addComponent(managerBtn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(staffBtn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(clientBtn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(logoutBtn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(logoutBtn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(userInfoLbl, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
         NavigationLayout.setVerticalGroup(
@@ -122,7 +133,9 @@ public class Frame extends javax.swing.JFrame {
             .addGroup(NavigationLayout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 46, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(userInfoLbl, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(12, 12, 12)
                 .addComponent(adminBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(managerBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -130,7 +143,7 @@ public class Frame extends javax.swing.JFrame {
                 .addComponent(staffBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(clientBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 139, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 120, Short.MAX_VALUE)
                 .addComponent(logoutBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
@@ -179,31 +192,52 @@ public class Frame extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    // Role-based access control methods
     private void adminBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_adminBtnActionPerformed
-        adminHomePnl.showPnl("home");
-        contentView.show(Content, "adminHomePnl");
+        if (checkAccess(5)) { // Admin role
+            adminHomePnl.showPnl("home");
+            contentView.show(Content, "adminHomePnl");
+        }
     }//GEN-LAST:event_adminBtnActionPerformed
 
     private void managerBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_managerBtnActionPerformed
-        managerHomePnl.showPnl("home");
-        contentView.show(Content, "managerHomePnl");
+        if (checkAccess(4)) { // Manager role
+            managerHomePnl.showPnl("home");
+            contentView.show(Content, "managerHomePnl");
+        }
     }//GEN-LAST:event_managerBtnActionPerformed
 
     private void staffBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_staffBtnActionPerformed
-        staffHomePnl.showPnl("home");
-        contentView.show(Content, "staffHomePnl");
+        if (checkAccess(3)) { // Staff role
+            staffHomePnl.showPnl("home");
+            contentView.show(Content, "staffHomePnl");
+        }
     }//GEN-LAST:event_staffBtnActionPerformed
 
     private void clientBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_clientBtnActionPerformed
-        clientHomePnl.showPnl("home");
-        contentView.show(Content, "clientHomePnl");
+        if (checkAccess(2)) { // Client role
+            clientHomePnl.showPnl("home");
+            contentView.show(Content, "clientHomePnl");
+        }
     }//GEN-LAST:event_clientBtnActionPerformed
 
     private void logoutBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_logoutBtnActionPerformed
-        frameView.show(Container, "loginPnl");
+        // Confirm logout
+        int result = JOptionPane.showConfirmDialog(this,
+            "Are you sure you want to logout?",
+            "Confirm Logout",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE);
+        
+        if (result == JOptionPane.YES_OPTION) {
+            logout();
+        }
     }//GEN-LAST:event_logoutBtnActionPerformed
 
+    // Session and user management
     public Main main;
+    private User currentUser; // Current logged-in user
+    
     public Login loginPnl = new Login();
     public Register registerPnl = new Register();
     
@@ -241,23 +275,166 @@ public class Frame extends javax.swing.JFrame {
         Content.add(staffHomePnl, "staffHomePnl");
         Content.add(clientHomePnl, "clientHomePnl");
         
+        // Initialize with no user logged in
+        updateUserInterface();
+        
         this.setVisible(true);
     }
     
+    // Navigation methods
     public void mainNav(){
-        frameView.show(Container, "homePnl");
+        if (currentUser != null) {
+            updateUserInterface();
+            frameView.show(Container, "homePnl");
+            // Auto-navigate to appropriate home based on role
+            navigateToRoleHome();
+        } else {
+            loginNav(); // Redirect to login if no user
+        }
     }
     
     public void loginNav(){
+        loginPnl.resetForm();
         frameView.show(Container, "loginPnl");
     }
     
     public void registerNav(){
+        registerPnl.resetForm();
         frameView.show(Container, "registerPnl");
     }
     
-    public void registerAction(String username, String password, String confpass){
-        main.sqlite.addUser(username, password);
+    // Secure registration method with validation
+    public boolean registerAction(String username, String password, String confpass){
+        // Additional server-side validation
+        if (!password.equals(confpass)) {
+            return false;
+        }
+        
+        boolean success = main.sqlite.addUser(username, password);
+        
+        if (success) {
+            // Log successful registration
+            main.sqlite.addLogs("INFO", username, "New user registered successfully", 
+                               new Timestamp(new Date().getTime()).toString());
+        }
+        
+        return success;
+    }
+    
+    // User session management
+    public void setCurrentUser(User user) {
+        this.currentUser = user;
+        updateUserInterface();
+        
+        // Log successful login
+        main.sqlite.addLogs("SUCCESS", user.getUsername(), "User logged in successfully", 
+                           new Timestamp(new Date().getTime()).toString());
+    }
+    
+    public User getCurrentUser() {
+        return currentUser;
+    }
+    
+    public void logout() {
+        if (currentUser != null) {
+            // Log logout
+            main.sqlite.addLogs("INFO", currentUser.getUsername(), "User logged out", 
+                               new Timestamp(new Date().getTime()).toString());
+            
+            currentUser = null;
+        }
+        
+        updateUserInterface();
+        loginNav();
+    }
+    
+    // Authorization check method
+    private boolean checkAccess(int requiredRole) {
+        if (currentUser == null) {
+            JOptionPane.showMessageDialog(this,
+                "Please login to access this feature.",
+                "Access Denied",
+                JOptionPane.WARNING_MESSAGE);
+            loginNav();
+            return false;
+        }
+        
+        // Check if user has sufficient role level
+        if (currentUser.getRole() < requiredRole) {
+            JOptionPane.showMessageDialog(this,
+                "You do not have permission to access this feature.\nRequired role: " + getRoleName(requiredRole),
+                "Access Denied",
+                JOptionPane.ERROR_MESSAGE);
+            
+            // Log unauthorized access attempt
+            main.sqlite.addLogs("WARNING", currentUser.getUsername(), 
+                               "Unauthorized access attempt to role " + requiredRole, 
+                               new Timestamp(new Date().getTime()).toString());
+            return false;
+        }
+        
+        return true;
+    }
+    
+    // Helper method to get role name
+    private String getRoleName(int role) {
+        switch (role) {
+            case 5: return "Administrator";
+            case 4: return "Manager";
+            case 3: return "Staff";
+            case 2: return "Client";
+            case 1: return "Disabled";
+            default: return "Unknown";
+        }
+    }
+    
+    // Update UI based on current user
+    private void updateUserInterface() {
+        if (currentUser != null) {
+            userInfoLbl.setText("User: " + currentUser.getUsername() + " (" + getRoleName(currentUser.getRole()) + ")");
+            
+            // Enable/disable buttons based on role
+            adminBtn.setEnabled(currentUser.getRole() >= 5);
+            managerBtn.setEnabled(currentUser.getRole() >= 4);
+            staffBtn.setEnabled(currentUser.getRole() >= 3);
+            clientBtn.setEnabled(currentUser.getRole() >= 2);
+            
+            // Visual feedback for disabled buttons
+            if (currentUser.getRole() < 5) adminBtn.setToolTipText("Administrator access required");
+            if (currentUser.getRole() < 4) managerBtn.setToolTipText("Manager access required");
+            if (currentUser.getRole() < 3) staffBtn.setToolTipText("Staff access required");
+            if (currentUser.getRole() < 2) clientBtn.setToolTipText("Client access required");
+            
+        } else {
+            userInfoLbl.setText("User: Not Logged In");
+            
+            // Disable all role-based buttons
+            adminBtn.setEnabled(false);
+            managerBtn.setEnabled(false);
+            staffBtn.setEnabled(false);
+            clientBtn.setEnabled(false);
+        }
+    }
+    
+    // Auto-navigate to appropriate home based on user role
+    private void navigateToRoleHome() {
+        if (currentUser != null) {
+            int role = currentUser.getRole();
+            
+            if (role >= 5) {
+                adminHomePnl.showPnl("home");
+                contentView.show(Content, "adminHomePnl");
+            } else if (role >= 4) {
+                managerHomePnl.showPnl("home");
+                contentView.show(Content, "managerHomePnl");
+            } else if (role >= 3) {
+                staffHomePnl.showPnl("home");
+                contentView.show(Content, "staffHomePnl");
+            } else if (role >= 2) {
+                clientHomePnl.showPnl("home");
+                contentView.show(Content, "clientHomePnl");
+            }
+        }
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -271,5 +448,6 @@ public class Frame extends javax.swing.JFrame {
     private javax.swing.JButton logoutBtn;
     private javax.swing.JButton managerBtn;
     private javax.swing.JButton staffBtn;
+    private javax.swing.JLabel userInfoLbl;
     // End of variables declaration//GEN-END:variables
 }
