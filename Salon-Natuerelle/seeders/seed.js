@@ -4,7 +4,7 @@ const { hashPassword } = require('../utils/hashPassword');
 const seedDatabase = async () => {
   try {
     // Sync database
-    await sequelize.sync({ force: true });
+    await sequelize.sync({ alter: true });
     console.log('Database synced successfully');
 
     // Create admin user

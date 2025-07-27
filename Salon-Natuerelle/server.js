@@ -8,6 +8,9 @@ const path = require('path');
 // Import database and models
 const { sequelize } = require('./models');
 
+// Import User model for checking seed status
+const { User } = require('./models');
+
 // Import routes
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -70,15 +73,22 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('Database connection established successfully.');
 
-    // Sync database (in production, use migrations instead)
-    if (process.env.NODE_ENV === 'development') {
-      await sequelize.sync({ alter: true });
-      console.log('Database synchronized');
+    // Auto-create tables in development
+    await sequelize.sync({ alter: true });
+    console.log('Database synchronized');
+
+    // Auto-seed if tables are empty
+    const userCount = await User.count();
+    if (userCount === 0) {
+      console.log('No users found, running seeder...');
+      const seedDatabase = require('./seeders/seed');
+      await seedDatabase();
     }
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV}`);
+      console.log(`Visit: http://localhost:${PORT}`);
     });
   } catch (error) {
     console.error('Unable to start server:', error);

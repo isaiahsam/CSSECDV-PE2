@@ -1,4 +1,5 @@
-const { AuditLog, User } = require('../models');
+const { Sequelize } = require('sequelize');
+const { AuditLog, User, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 // Admin only - Get all logs

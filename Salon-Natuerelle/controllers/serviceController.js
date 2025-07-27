@@ -41,7 +41,7 @@ const getAllServices = async (req, res, next) => {
     const whereClause = { isActive: true };
 
     if (search) {
-      whereClause.name = { [Op.iLike]: `%${search}%` };
+      whereClause.name = { [Op.like]: `%${search}%` };
     }
 
     const { count, rows } = await Service.findAndCountAll({

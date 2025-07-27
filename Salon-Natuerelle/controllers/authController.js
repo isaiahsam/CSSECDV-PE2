@@ -49,50 +49,85 @@ const register = async (req, res, next) => {
   }
 };
 
-// Admin only - Get all users
-const getAllUsers = async (req, res, next) => {
+const login = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, role, search } = req.query;
-    const offset = (page - 1) * limit;
+    const { email, password } = req.body;
 
-    const whereClause = {};
-
-    if (role) {
-      whereClause.role = role;
+    // Find user
+    const user = await User.findOne({ where: { email } });
+    
+    if (!user) {
+      await Logger.logLogin(null, false, req);
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    if (search) {
-      whereClause[Op.or] = [
-        { name: { [Op.iLike]: `%${search}%` } },
-        { email: { [Op.iLike]: `%${search}%` } }
-      ];
+    // Validate password
+    const isValidPassword = await user.validatePassword(password);
+    
+    if (!isValidPassword) {
+      await Logger.logLogin(user.id, false, req);
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const { count, rows } = await User.findAndCountAll({
-      where: whereClause,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: [['createdAt', 'DESC']]
-    });
+    // Log successful login
+    await Logger.logLogin(user.id, true, req);
+
+    // Generate token
+    const token = generateToken(user);
 
     res.json({
-      users: rows.map(user => user.toSafeObject()),
-      pagination: {
-        total: count,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(count / limit)
-      }
+      message: 'Login successful',
+      user: user.toSafeObject(),
+      token
     });
   } catch (error) {
     next(error);
   }
 };
 
+const getMe = async (req, res, next) => {
+  try {
+    res.json({
+      user: req.user.toSafeObject()
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = req.user;
+
+    // Validate current password
+    const isValidPassword = await user.validatePassword(currentPassword);
+    
+    if (!isValidPassword) {
+      return res.status(400).json({ error: 'Current password is incorrect' });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    // Log password change
+    await Logger.logUserAction(
+      'PASSWORD_CHANGED',
+      `User ${user.email} changed their password`,
+      user.id,
+      req
+    );
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
-  registerStaff,
-  deleteUser,
-  changeUserRole,
-  getAllCustomers,
-  getAllUsers
+  register,
+  login,
+  getMe,
+  changePassword
 };
