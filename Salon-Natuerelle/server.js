@@ -8,9 +8,6 @@ const path = require('path');
 // Import database and models
 const { sequelize } = require('./models');
 
-// Import User model for checking seed status
-const { User } = require('./models');
-
 // Import routes
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -47,8 +44,23 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/reservations', reservationRoutes);
 app.use('/api/logs', logRoutes);
 
-// Root route
+// Serve index.html for the root route
 app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Handle client-side routing - serve the requested HTML file or 404
+app.get('/pages/*', (req, res) => {
+  const filePath = path.join(__dirname, 'public', req.path);
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      res.status(404).sendFile(path.join(__dirname, 'public', 'pages', 'error.html'));
+    }
+  });
+});
+
+// Root API route
+app.get('/api', (req, res) => {
   res.json({
     message: 'Welcome to Salon Natuerelle API',
     version: '1.0.0',
@@ -66,6 +78,22 @@ app.get('/', (req, res) => {
 app.use(notFound);
 app.use(errorHandler);
 
+// Auto-seed function
+const autoSeed = async () => {
+  const { User } = require('./models');
+  
+  // Check if admin exists
+  const adminExists = await User.findOne({ 
+    where: { email: 'admin@salonnatuerelle.com' } 
+  });
+  
+  if (!adminExists) {
+    console.log('No admin found, running initial seed...');
+    const seedDatabase = require('./seeders/seed');
+    await seedDatabase();
+  }
+};
+
 // Start server
 const startServer = async () => {
   try {
@@ -73,22 +101,16 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('Database connection established successfully.');
 
-    // Auto-create tables in development
+    // Sync database (in production, use migrations instead)
     await sequelize.sync({ alter: true });
     console.log('Database synchronized');
-
-    // Auto-seed if tables are empty
-    const userCount = await User.count();
-    if (userCount === 0) {
-      console.log('No users found, running seeder...');
-      const seedDatabase = require('./seeders/seed');
-      await seedDatabase();
-    }
+    
+    // Auto-seed if needed
+    await autoSeed();
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV}`);
-      console.log(`Visit: http://localhost:${PORT}`);
     });
   } catch (error) {
     console.error('Unable to start server:', error);

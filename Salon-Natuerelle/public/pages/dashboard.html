@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Salon Natuerelle</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">Salon Natuerelle</a>
+            <ul class="nav-links">
+                <!-- Dynamic navigation -->
+            </ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="alerts-container"></div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">Welcome, <span id="userName"></span>!</h1>
+                <p>Role: <span id="userRole"></span></p>
+            </div>
+
+            <div class="stats-grid" id="statsGrid">
+                <!-- Dynamic stats -->
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Upcoming Reservations</h2>
+            </div>
+            <div id="upcomingReservations">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+
+        <div class="card" id="quickActions">
+            <div class="card-header">
+                <h2 class="card-title">Quick Actions</h2>
+            </div>
+            <div class="grid grid-3" id="actionsGrid">
+                <!-- Dynamic actions based on role -->
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/app.js"></script>
+    <script>
+        if (!checkAuth()) {
+            // Redirect is handled in checkAuth
+        } else {
+            const user = storage.getUser();
+            document.getElementById('userName').textContent = user.name;
+            document.getElementById('userRole').textContent = user.role;
+
+            // Load dashboard data
+            loadDashboard();
+        }
+
+        async function loadDashboard() {
+            const user = storage.getUser();
+            
+            // Load stats based on role
+            if (user.role === 'Customer') {
+                loadCustomerStats();
+            } else if (user.role === 'Manager') {
+                loadManagerStats();
+            } else if (user.role === 'Admin') {
+                loadAdminStats();
+            }
+
+            // Load upcoming reservations
+            loadUpcomingReservations();
+            
+            // Load quick actions
+            loadQuickActions(user.role);
+        }
+
+        async function loadCustomerStats() {
+            try {
+                const reservations = await api.reservations.getAll();
+                const stats = {
+                    total: reservations.reservations.length,
+                    upcoming: reservations.reservations.filter(r => 
+                        r.status === 'pending' || r.status === 'confirmed'
+                    ).length,
+                    completed: reservations.reservations.filter(r => 
+                        r.status === 'completed'
+                    ).length
+                };
+
+                document.getElementById('statsGrid').innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value">${users.pagination.total}</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${logs.recentActivity}</div>
+                        <div class="stat-label">24h Activity</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${logs.actionStats.length}</div>
+                        <div class="stat-label">Action Types</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadUpcomingReservations() {
+            try {
+                const response = await api.reservations.getAll({ 
+                    status: 'confirmed',
+                    limit: 5 
+                });
+
+                const container = document.getElementById('upcomingReservations');
+                
+                if (response.reservations.length === 0) {
+                    container.innerHTML = '<p>No upcoming reservations</p>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Service</th>
+                                <th>Customer</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${response.reservations.map(reservation => `
+                                <tr>
+                                    <td>${ui.formatDate(reservation.reservationDate)}</td>
+                                    <td>${reservation.Service.name}</td>
+                                    <td>${reservation.customer.name}</td>
+                                    <td>
+                                        <span class="badge ${ui.getStatusBadgeClass(reservation.status)}">
+                                            ${reservation.status}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Error loading reservations:', error);
+            }
+        }
+
+        function loadQuickActions(role) {
+            const actionsGrid = document.getElementById('actionsGrid');
+            
+            if (role === 'Customer') {
+                actionsGrid.innerHTML = `
+                    <a href="/pages/book.html" class="btn btn-primary">Book Appointment</a>
+                    <a href="/pages/my-reservations.html" class="btn btn-secondary">View Reservations</a>
+                    <a href="/pages/services.html" class="btn btn-secondary">Browse Services</a>
+                `;
+            } else if (role === 'Manager') {
+                actionsGrid.innerHTML = `
+                    <a href="/pages/services.html" class="btn btn-primary">Manage Services</a>
+                    <a href="/pages/my-reservations.html" class="btn btn-secondary">View All Reservations</a>
+                    <a href="/pages/admin.html#customers" class="btn btn-secondary">View Customers</a>
+                `;
+            } else if (role === 'Admin') {
+                actionsGrid.innerHTML = `
+                    <a href="/pages/admin.html" class="btn btn-primary">Admin Panel</a>
+                    <a href="/pages/admin.html#users" class="btn btn-secondary">Manage Users</a>
+                    <a href="/pages/admin.html#logs" class="btn btn-secondary">View Logs</a>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

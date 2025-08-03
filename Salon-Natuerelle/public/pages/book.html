@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment - Salon Natuerelle</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">Salon Natuerelle</a>
+            <ul class="nav-links">
+                <!-- Dynamic navigation -->
+            </ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="alerts-container"></div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">Book an Appointment</h1>
+            </div>
+
+            <form id="bookingForm">
+                <div class="form-group">
+                    <label for="serviceSelect" class="form-label">Select Service</label>
+                    <select id="serviceSelect" class="form-control" required>
+                        <option value="">Choose a service...</option>
+                    </select>
+                </div>
+
+                <div id="serviceDetails" style="display: none;" class="alert alert-info">
+                    <!-- Service details will be shown here -->
+                </div>
+
+                <div class="form-group">
+                    <label for="reservationDate" class="form-label">Select Date</label>
+                    <input type="date" id="reservationDate" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="reservationTime" class="form-label">Select Time</label>
+                    <input type="time" id="reservationTime" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes" class="form-label">Special Notes (Optional)</label>
+                    <textarea id="notes" class="form-control" rows="3" 
+                              placeholder="Any special requests or information..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Book Appointment</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="../js/app.js"></script>
+    <script>
+        if (!checkAuth()) {
+            // Redirect is handled in checkAuth
+        } else {
+            const user = storage.getUser();
+            if (user.role !== 'Customer') {
+                ui.showAlert('Only customers can book appointments', 'error');
+                setTimeout(() => {
+                    window.location.href = '/pages/dashboard.html';
+                }, 2000);
+            }
+        }
+
+        let services = [];
+
+        // Set minimum date to today
+        document.getElementById('reservationDate').min = new Date().toISOString().split('T')[0];
+
+        // Load services on page load
+        loadServices();
+
+        // Check for service parameter in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const serviceId = urlParams.get('service');
+
+        async function loadServices() {
+            try {
+                const response = await api.services.getAll();
+                services = response.services;
+                
+                const select = document.getElementById('serviceSelect');
+                select.innerHTML = '<option value="">Choose a service...</option>' +
+                    services.map(service => 
+                        `<option value="${service.id}" ${service.id == serviceId ? 'selected' : ''}>
+                            ${service.name} - ${ui.formatCurrency(service.price)} (${service.duration} min)
+                        </option>`
+                    ).join('');
+                
+                if (serviceId) {
+                    showServiceDetails();
+                }
+            } catch (error) {
+                ui.showAlert('Error loading services', 'error');
+            }
+        }
+
+        document.getElementById('serviceSelect').addEventListener('change', showServiceDetails);
+
+        function showServiceDetails() {
+            const selectedId = document.getElementById('serviceSelect').value;
+            if (!selectedId) {
+                document.getElementById('serviceDetails').style.display = 'none';
+                return;
+            }
+
+            const service = services.find(s => s.id == selectedId);
+            if (service) {
+                document.getElementById('serviceDetails').innerHTML = `
+                    <strong>${service.name}</strong><br>
+                    Price: ${ui.formatCurrency(service.price)}<br>
+                    Duration: ${service.duration} minutes<br>
+                    ${service.description ? `Description: ${service.description}` : ''}
+                `;
+                document.getElementById('serviceDetails').style.display = 'block';
+            }
+        }
+
+        document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const serviceId = document.getElementById('serviceSelect').value;
+            const date = document.getElementById('reservationDate').value;
+            const time = document.getElementById('reservationTime').value;
+            const notes = document.getElementById('notes').value;
+            
+            // Combine date and time
+            const reservationDate = new Date(`${date}T${time}`);
+            
+            // Validate future date
+            if (reservationDate <= new Date()) {
+                ui.showAlert('Please select a future date and time', 'error');
+                return;
+            }
+            
+            try {
+                await api.reservations.create({
+                    serviceId: parseInt(serviceId),
+                    reservationDate: reservationDate.toISOString(),
+                    notes
+                });
+                
+                ui.showAlert('Appointment booked successfully!', 'success');
+                
+                setTimeout(() => {
+                    window.location.href = '/pages/my-reservations.html';
+                }, 2000);
+                
+            } catch (error) {
+                ui.showAlert(error.message, 'error');
+            }
+        });
+    </script>
+</body>
+</html>
